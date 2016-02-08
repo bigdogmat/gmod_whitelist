@@ -1,5 +1,7 @@
 util.AddNetworkString "bigdogmat_whitelist_open"
 
+include "sv_manifest.lua"
+
 -- whitelist_save
 -- Args: !
 -- Notes: Saves the whitelist in JSON format

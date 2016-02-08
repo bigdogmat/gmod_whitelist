@@ -1,3 +1,5 @@
+AddCSLuaFile()
+
 -- Global shared table
 -- Shared because it's easier to use
 -- whitelist on both client and server

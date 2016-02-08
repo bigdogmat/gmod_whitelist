@@ -1,3 +1,5 @@
+include "cl_manifest.lua"
+
 -- Base font for button text
 
 surface.CreateFont("bigdogmat_button_text", {
