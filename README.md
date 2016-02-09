@@ -6,6 +6,8 @@ This adds a server-side whitelist to Garry's Mod servers. The features included 
 
 This addon is currently not finished and most aspects in the menu are not functional. While this addon isn't finished the base console commands are done so it can still be used as a whitelist.
 
+Also I know this way too over done for it being a whitelist, I'm just bored
+
 # License
 
 Copyright 2016 bigdogmat
