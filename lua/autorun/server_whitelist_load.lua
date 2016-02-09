@@ -1,8 +1,7 @@
 -- Load all base files
 
 if SERVER then
-
-  AddCSLuaFile "whitelist/cl_init.lua"
+  
   include "whitelist/sv_init.lua"
 
 end

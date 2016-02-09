@@ -1,4 +1,5 @@
-AddCSLuaFile()
+-- Base shared file
+
 
 -- Global shared table
 -- Shared because it's easier to use
