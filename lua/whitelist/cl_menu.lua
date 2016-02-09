@@ -18,10 +18,10 @@ end
 
 -- Receive function for whitelist menu
 
-net.Receive("bigdogmat_whitelist_open", function()
+net.Receive("bigdogmat_whitelist_open", function(len)
 
   local list
-  local reason, count, lookup = net.ReadString(), net.ReadUInt(10), {}
+  local reason, count, lookup = net.ReadString(), 0, {}
 
 
   -- Helper functions for adding and removing SteamIDs
@@ -100,8 +100,10 @@ net.Receive("bigdogmat_whitelist_open", function()
     list:SetMultiSelect(true)
     list:AddColumn "SteamIDs"
 
-    for i = 1, count do
-      add_ID(net.ReadString(), true)
+    for SteamID in string.gmatch(util.Decompress(net.ReadData(net.ReadUInt(16))), "STEAM_[0-9]:[0-9]:[0-9]+") do
+
+      add_ID(SteamID, true)
+
     end
 
     function list:DoDoubleClick(_, line)

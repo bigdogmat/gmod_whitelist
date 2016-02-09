@@ -121,13 +121,15 @@ function WHITELIST:Menu(caller)
   net.Start "bigdogmat_whitelist_open"
     net.WriteString(self.kickreason)
 
-    -- 10 Bits should be enough for this, if not then burn the person who has
-    -- over 1024 people on their whitelist
-    net.WriteUInt(self.count, 10)
-
+    local list = ''
     for k, _ in pairs(self.lookup) do
-      net.WriteString(k)
+      list = list .. k
     end
+
+    list = util.Compress(list)
+
+    net.WriteUInt(#list, 16)
+    net.WriteData(list, #list)
   net.Send(caller)
 
 end
