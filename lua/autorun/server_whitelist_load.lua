@@ -1,7 +1,7 @@
 -- Load all base files
 
 if SERVER then
-  
+
   include "whitelist/sv_init.lua"
 
 end

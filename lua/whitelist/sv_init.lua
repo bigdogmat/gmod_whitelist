@@ -2,37 +2,51 @@
 
 
 -- Global server-side table
-Whitelist = Whitelist or {
+WHITELIST = WHITELIST or {
   lookup     = {},
   count      = 0,
   kickreason = "You're not whitelisted!",
   ranks      = {["admin"] = true, ["superadmin"] = true},
 }
 
-util.AddNetworkString "bigdogmat_whitelist_open"
 
 -- Include all server-side assets and
 -- add client assets to download list
 include "sv_manifest.lua"
 
--- whitelist_save
--- Args: !
--- Notes: Saves the whitelist in JSON format
 
-local function whitelist_save()
-  file.Write("bigdogmat_whitelist/whitelist.txt", util.TableToJSON(Whitelist))
+-- This is only needed because hook.Add
+function WHITELIST:IsValid()
+
+  return true
+
 end
-hook.Add("ShutDown", "bigdogmat_whitelist_save", whitelist_save)
 
--- whitelist_reload
+
+-- Save
 -- Args: !
--- Notes: Will reload the server whitelist file
+-- Description: Saves whitelist in JSON format
+-- Notes: Auto runs on shutdown or map change
 
-local function whitelist_reload()
+function WHITELIST:Save()
+
+  file.Write("bigdogmat_whitelist/whitelist.txt", util.TableToJSON(self))
+
+end
+hook.Add("ShutDown", WHITELIST, WHITELIST.Save)
+
+
+-- Reload
+-- Args: !
+-- Description: Loads the whitelist
+-- Notes: Auto loads on Initialize
+
+function WHITELIST:Reload()
+
   if not file.Exists("bigdogmat_whitelist", "DATA") then
 
     file.CreateDir "bigdogmat_whitelist"
-    whitelist_save()
+    self:Save()
 
   elseif file.Exists("bigdogmat_whitelist/whitelist.txt", "DATA") then
 
@@ -44,51 +58,112 @@ local function whitelist_reload()
       local jsontable = util.JSONToTable(json)
 
       if jsontable then
-        Whitelist = jsontable
+        for k, v in pairs(jsontable) do
+          self[k] = v
+        end
       else
         MsgN "Whitelist: Malformed whitelist file!"
         MsgN "Whitelist: Send file to addon creator if you want a chance to back it up. It's located in data/bigdogmat_whitelist"
         MsgN "Whitelist: Be sure to save backup of file before changing the whitelist as once changed it will overwrite bad file"
       end
     end
-
-    MsgN "Whitelist loaded!"
-    MsgN("Whitelist: ", Whitelist.count, " player(s) whitelisted")
-
   end
+
+  MsgN "Whitelist loaded!"
+  MsgN("Whitelist: ", self.count, " player(s) whitelisted")
+
 end
-hook.Add("Initialize", "bigdogmat_whitelist_load", whitelist_reload)
+hook.Add("Initialize", WHITELIST, WHITELIST.Reload)
 
--- whitelist_update
--- Args: SteamID, boolean
--- Notes: SteamID is the players SteamID and boolean decides whether the
--- id will be added or removed from the whitelist
 
-local function whitelist_update(id, mode)
-  if id == '' then return end
-  if (Whitelist.lookup[id] or false) == mode then return end
+-- Add
+-- Args: SteamID:string
+-- Description: Adds a SteamID to the whitelist
+-- Notes: !
 
-  Whitelist.lookup[id] = mode or nil
-  Whitelist.count = Whitelist.count + (mode and 1 or -1)
+function WHITELIST:Add(SteamID)
+
+  if SteamID == '' then return end
+  if self.lookup[SteamID] then return end
+
+  self.lookup[SteamID] = true
+  self.count = self.count + 1
+
 end
 
--- whitelist_menu
--- Args: Player
--- Notes: Sends the whitelist data to a client. Rank doesn't
--- have to be checked as they can't do anything with this info
 
-local function whitelist_menu(caller)
+-- Remove
+-- Args: SteamID:string
+-- Description: Removes a SteamID from the whitelist
+-- Notes: !
+
+function WHITELIST:Remove(SteamID)
+
+  if SteamID == '' then return end
+  if not self.lookup[SteamID] then return end
+
+  self.lookup[SteamID] = nil
+  self.count = self.count - 1
+
+end
+
+
+-- Menu
+-- Args: Player:entity
+-- Description: Send whitelist data to client and
+-- opens whitelist menu
+-- Notes: I'll probably change the way this function
+-- sends data
+
+util.AddNetworkString "bigdogmat_whitelist_open"
+function WHITELIST:Menu(caller)
+
   net.Start "bigdogmat_whitelist_open"
-    net.WriteString(Whitelist.kickreason)
+    net.WriteString(self.kickreason)
 
     -- 10 Bits should be enough for this, if not then burn the person who has
     -- over 1024 people on their whitelist
-    net.WriteUInt(Whitelist.count, 10)
+    net.WriteUInt(self.count, 10)
 
-    for k, _ in pairs(Whitelist.lookup) do
+    for k, _ in pairs(self.lookup) do
       net.WriteString(k)
     end
   net.Send(caller)
+
+end
+
+
+-- RankList
+-- Args: !
+-- Description: Returns a formatted string of all
+-- usergroups allowed to make whitelist changes
+-- Notes: !
+
+function WHITELIST:RankList()
+
+  local str = ''
+
+  for k, _ in pairs(self.ranks) do
+    str = str .. k .. ", "
+  end
+
+  return str:sub(1, -3)
+
+end
+
+
+-- Allowed
+-- Args: Player:entity
+-- Description: Returns true if player is allowed to
+-- make changes to the whitelist, false if not
+-- Notes: Returns true for console
+
+function WHITELIST:Allowed(ply)
+
+  if not IsValid(ply) then return true end
+
+  return self.ranks[ply:GetUserGroup()] == true
+
 end
 
 
@@ -101,9 +176,9 @@ end
 -- Notes: Saves the whitelist to file
 
 concommand.Add("whitelist_save", function(caller)
-  if IsValid(caller) and not Whitelist.ranks[caller:GetUserGroup()] then return end
+  if not WHITELIST:Allowed(caller) then return end
 
-  whitelist_save()
+  WHITELIST:Save()
 end)
 
 -- whitelist_reload
@@ -113,7 +188,7 @@ end)
 concommand.Add("whitelist_reload", function(caller)
   if IsValid(caller) then return end
 
-  whitelist_reload()
+  WHITELIST:Reload()
 end)
 
 -- whitelist_ranks
@@ -122,20 +197,12 @@ end)
 -- console
 
 concommand.Add("whitelist_ranklist", function(caller)
-  if IsValid(caller) and not Whitelist.ranks[caller:GetUserGroup()] then return end
-
-  local str = ''
-
-  for k, _ in pairs(Whitelist.ranks) do
-    str = str .. k .. ", "
-  end
-
-  str = str:sub(1, -3)
+  if not WHITELIST:Allowed(caller) then return end
 
   if IsValid(caller) then
-    caller:PrintMessage(HUD_PRINTCONSOLE, str)
+    caller:PrintMessage(HUD_PRINTCONSOLE, WHITELIST:RankList())
   else
-    MsgN(str)
+    MsgN(WHITELIST:RankList())
   end
 end)
 
@@ -148,7 +215,7 @@ concommand.Add("whitelist_rankadd", function(caller, command, args)
   if IsValid(caller) then return end
 
   for _, v in ipairs(args) do
-    Whitelist.ranks[v] = true
+    WHITELIST.ranks[v] = true
   end
 end)
 
@@ -161,7 +228,7 @@ concommand.Add("whitelist_rankremove", function(caller, command, args)
   if IsValid(caller) then return end
 
   for _, v in ipairs(args) do
-    Whitelist.ranks[v] = nil
+    WHITELIST.ranks[v] = nil
   end
 end)
 
@@ -170,10 +237,10 @@ end)
 -- Notes: Sets the kick text for when a player is not whitelisted
 
 concommand.Add("whitelist_kickreason", function(caller, command, args, arg)
-  if IsValid(caller) and not Whitelist.ranks[caller:GetUserGroup()] then return end
   if arg == '' then return end
+  if not WHITELIST:Allowed(caller) then return end
 
-  Whitelist.kickreason = arg
+  WHITELIST.kickreason = arg
 end)
 
 -- whitelist_add
@@ -181,10 +248,10 @@ end)
 -- Notes: Adds a SteamID to the whitelist
 
 concommand.Add("whitelist_add", function(caller, command, args, arg)
-  if IsValid(caller) and not Whitelist.ranks[caller:GetUserGroup()] then return end
   if arg == '' then return end
+  if not WHITELIST:Allowed(caller) then return end
 
-  whitelist_update(arg, true)
+  WHITELIST:Add(arg)
 end)
 
 -- whitelist_remove
@@ -192,10 +259,10 @@ end)
 -- Notes: Removes a SteamID from the whitelist
 
 concommand.Add("whitelist_remove", function(caller, command, args, arg)
-  if IsValid(caller) and not Whitelist.ranks[caller:GetUserGroup()] then return end
   if arg == '' then return end
+  if not WHITELIST:Allowed(caller) then return end
 
-  whitelist_update(arg, false)
+  wWHITELIST:Remove(arg)
 end)
 
 -- whitelist_menu
@@ -204,9 +271,9 @@ end)
 
 concommand.Add("whitelist_menu", function(caller)
   if not IsValid(caller) then return end
-  if not Whitelist.ranks[caller:GetUserGroup()] then return end
+  if not WHITELIST:Allowed(caller) then return end
 
-  whitelist_menu(caller)
+  WHITELIST:Menu(caller)
 end)
 
 
@@ -220,10 +287,10 @@ end)
 
 hook.Add("PlayerSay", "bigdogmat_whitelist_chat_commands", function(caller, text)
   if not IsValid(caller) then return end
-  if not Whitelist.ranks[caller:GetUserGroup()] then return end
+  if not WHITELIST:Allowed(caller) then return end
 
   if string.lower(text) == "!whitelist" then
-    whitelist_menu(caller)
+    WHITELIST:Menu(caller)
     return ''
   end
 end)
@@ -233,8 +300,8 @@ end)
 -- a connecting player is on the whitelist
 
 hook.Add("CheckPassword", "bigdogmat_whitelist_kick", function(steamID)
-  if not (Whitelist.lookup[util.SteamIDFrom64(steamID)] or game.SinglePlayer()) and Whitelist.count > 0 then
-    return false, Whitelist.kickreason
+  if not (WHITELIST.lookup[util.SteamIDFrom64(steamID)] or game.SinglePlayer()) and WHITELIST.count > 0 then
+    return false, WHITELIST.kickreason
   end
 end)
 
