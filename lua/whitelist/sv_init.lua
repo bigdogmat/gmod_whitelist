@@ -1,5 +1,18 @@
+-- Base server-side file
+
+
+-- Global server-side table
+Whitelist = Whitelist or {
+  lookup     = {},
+  count      = 0,
+  kickreason = "You're not whitelisted!",
+  ranks      = {["admin"] = true, ["superadmin"] = true},
+}
+
 util.AddNetworkString "bigdogmat_whitelist_open"
 
+-- Include all server-side assets and
+-- add client assets to download list
 include "sv_manifest.lua"
 
 -- whitelist_save

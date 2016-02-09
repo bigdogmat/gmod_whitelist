@@ -1,44 +1,7 @@
 -- Whitelist menu
 
 
--- whitelist_entryadd
--- Args: SteamID, listpanel, Initialize
--- Notes: Would've made whitelist_add function shared
--- not the differences are just too much
-
-local function whitelist_entryadd(id, panel, initial)
-  if id == '' then return end
-  if Whitelist.lookup[id] then return end
-
-  Whitelist.lookup[id] = panel:AddLine(id):GetID()
-  Whitelist.count = Whitelist.count + 1
-
-  if initial then return end
-
-  LocalPlayer():ConCommand("whitelist_add " .. id)
-end
-
--- whitelist_entryadd
--- Args: SteamID, listpanel
--- Notes: Would've made whitelist_remove function shared
--- not the differences are just too much
-
-local function whitelist_entryremove(id, panel)
-  if id == '' then return end
-  if not Whitelist.lookup[id] then return end
-
-  panel:RemoveLine(Whitelist.lookup[id])
-  Whitelist.lookup[id] = nil
-  Whitelist.count = Whitelist.count - 1
-
-  LocalPlayer():ConCommand("whitelist_remove " .. id)
-end
-
--- drawBaseStyle
--- Args: Panel, width, height
--- Notes: Used to draw the base style for panels.
--- Just a little helper function so I don't have to
--- write it over and over and can easily change shit
+-- Helper functions for drawing panels
 
 local function drawBaseStyle(self, w, h)
   Derma_DrawBackgroundBlur(self, self.starttime)
@@ -57,13 +20,38 @@ end
 
 net.Receive("bigdogmat_whitelist_open", function()
 
-  -- Update all of our variables.
-  -- May add a system so this isn't needed every time
-  -- this is opened but for now this is fine
+  local list
+  local reason, count, lookup = net.ReadString(), net.ReadUInt(10), {}
 
-  Whitelist.lookup = {} -- gc will get this
-  Whitelist.kickreason = net.ReadString()
-  Whitelist.count = net.ReadUInt(10)
+
+  -- Helper functions for adding and removing SteamIDs
+
+  local function add_ID(id, initial)
+
+    if id == '' then return end
+    if lookup[id] then return end
+
+    lookup[id] = list:AddLine(id):GetID()
+    count = count + 1
+
+    if not initial then
+      LocalPlayer():ConCommand("whitelist_add " .. id)
+    end
+
+  end
+
+  local function remove_ID(id)
+
+    if id == '' then return end
+    if not lookup[id] then return end
+
+    list:RemoveLine(lookup[id])
+    lookup[id] = nil
+    count = count - 1
+
+    LocalPlayer():ConCommand("whitelist_remove " .. id)
+
+  end
 
   -- Base panel
   local base = vgui.Create "DPanel"
@@ -106,19 +94,19 @@ net.Receive("bigdogmat_whitelist_open", function()
     function leftbase:Paint() end
 
   -- SteamID list panel
-  local list = leftbase:Add "DListView"
+  list = leftbase:Add "DListView"
     --list:SetHeight(FI)
     list:Dock(FILL)
     list:SetMultiSelect(true)
     list:AddColumn "SteamIDs"
 
-    for i = 1, Whitelist.count do
-      whitelist_entryadd(net.ReadString(), list, true)
+    for i = 1, count do
+      add_ID(net.ReadString(), true)
     end
 
     function list:DoDoubleClick(_, line)
 
-      whitelist_entryremove(line:GetValue(1), self)
+      remove_ID(line:GetValue(1))
 
     end
 
@@ -170,7 +158,7 @@ net.Receive("bigdogmat_whitelist_open", function()
         function confirm:DoClick()
 
           for k, _ in pairs(Whitelist.lookup) do
-            whitelist_entryremove(k, list)
+            remove_ID(k)
           end
 
           query:Remove()
@@ -226,7 +214,7 @@ net.Receive("bigdogmat_whitelist_open", function()
     function list_remove_select:DoClick()
 
       for _, v in pairs(list:GetSelected()) do
-        whitelist_entryremove(v:GetValue(1), list)
+        remove_ID(v:GetValue(1))
       end
 
     end
