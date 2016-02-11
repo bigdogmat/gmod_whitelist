@@ -1,6 +1,5 @@
 -- Whitelist menu
 
-
 -- Helper functions for drawing panels
 
 local function drawBaseStyle(self, w, h)
@@ -22,7 +21,7 @@ net.Receive("bigdogmat_whitelist_open", function(len)
 
   local list
   local reason, count, lookup = net.ReadString(), 0, {}
-
+  local data = util.Decompress(net.ReadData(net.ReadUInt(16)))
 
   -- Helper functions for adding and removing SteamIDs
 
@@ -52,6 +51,27 @@ net.Receive("bigdogmat_whitelist_open", function(len)
     LocalPlayer():ConCommand("whitelist_remove " .. id)
 
   end
+
+  -- coroutine used to slow down the process of filling up the list
+  local fill = coroutine.create(function()
+    local inside = coroutine.running()
+
+    for SteamID in string.gmatch(data, "STEAM_[0-9]:[0-9]:[0-9]+") do
+
+      add_ID(SteamID, true)
+
+      if count % 25 == 0 then
+
+        timer.Simple(0.1, function()
+          if not inside then return end
+          coroutine.resume(inside)
+        end)
+        coroutine.yield()
+
+      end
+
+    end
+  end)
 
   -- Base panel
   local base = vgui.Create "DPanel"
@@ -100,11 +120,7 @@ net.Receive("bigdogmat_whitelist_open", function(len)
     list:SetMultiSelect(true)
     list:AddColumn "SteamIDs"
 
-    for SteamID in string.gmatch(util.Decompress(net.ReadData(net.ReadUInt(16))), "STEAM_[0-9]:[0-9]:[0-9]+") do
-
-      add_ID(SteamID, true)
-
-    end
+    coroutine.resume(fill)
 
     function list:DoDoubleClick(_, line)
 
