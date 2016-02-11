@@ -1,19 +1,5 @@
 -- Whitelist menu
 
--- Helper functions for drawing panels
-
-local function drawBaseStyle(self, w, h)
-  Derma_DrawBackgroundBlur(self, self.starttime)
-
-  draw.RoundedBox(8, 0, 0, w, h, Color(40, 80, 80))
-  draw.RoundedBox(8, 4, 4, w - 8, h - 8, Color(52, 152, 219, 200))
-end
-
-local function drawButtonStlye(w, h)
-  draw.RoundedBox(8, 0, 0, w, h, Color(255, 255, 255))
-  draw.RoundedBox(8, 1, 1, w - 2, h - 2, Color(149, 165, 166))
-end
-
 
 -- Receive function for whitelist menu
 
@@ -74,19 +60,11 @@ net.Receive("bigdogmat_whitelist_open", function(len)
   end)
 
   -- Base panel
-  local base = vgui.Create "DPanel"
+  local base = vgui.Create "DWhitelistPanel"
     base:SetSize(400, 400)
     base:DockPadding(10, 50, 10, 10)
     base:Center()
     base:MakePopup()
-
-    base.starttime = SysTime()
-    function base:Paint(w, h)
-
-      drawBaseStyle(self, w, h)
-      draw.RoundedBoxEx(8, 4, 4, w - 8, 40, Color(21, 108, 150), true, true, false, false)
-
-    end
 
   -- Close base panel
   local close = base:Add "DButton"
@@ -131,10 +109,8 @@ net.Receive("bigdogmat_whitelist_open", function(len)
   -- Remove all SteamIDs from whitelist. This'll
   -- have a confirmation button for the sake of
   -- sanity
-  local list_remove_all = leftbase:Add "DButton"
+  local list_remove_all = leftbase:Add "DWhitelistButton"
     list_remove_all:SetText "Remove All"
-    list_remove_all:SetTextColor(Color(236, 240, 241))
-    list_remove_all:SetFont "bigdogmat_button_text"
     list_remove_all:DockMargin(0, 2, 0, 0)
     list_remove_all:Dock(BOTTOM)
 
@@ -143,20 +119,11 @@ net.Receive("bigdogmat_whitelist_open", function(len)
       base:SetVisible(false)
 
       -- Base panel
-      local query = vgui.Create "DPanel"
+      local query = vgui.Create "DWhitelistPanel"
         query:DockPadding(20, 15, 20, 15)
         query:SetSize(280, 120)
         query:Center()
         query:MakePopup()
-
-        query.starttime = SysTime()
-        function query:Paint(w, h)
-
-          drawBaseStyle(self, w, h)
-
-        end
-
-        timer.Simple(10, function() query:Remove(); base:SetVisible(true) end)
 
       -- Confirmation text
       local message = query:Add "DLabel"
@@ -166,9 +133,8 @@ net.Receive("bigdogmat_whitelist_open", function(len)
         message:Dock(TOP)
         message:SetContentAlignment(8)
 
-      local confirm = query:Add "DButton"
+      local confirm = query:Add "DWhitelistButton"
         confirm:SetText "I'm sure"
-        confirm:SetFont "bigdogmat_button_text"
         confirm:SetWidth(90)
         confirm:DockMargin(0, 15, 0, 0)
         confirm:Dock(LEFT)
@@ -184,15 +150,8 @@ net.Receive("bigdogmat_whitelist_open", function(len)
 
         end
 
-        function confirm:Paint(w, h)
-
-          drawButtonStlye(w, h)
-
-        end
-
-      local decline = query:Add "DButton"
+      local decline = query:Add "DWhitelistButton"
         decline:SetText "No"
-        decline:SetFont "bigdogmat_button_text"
         decline:SetWidth(90)
         decline:DockMargin(0, 15, 0, 0)
         decline:Dock(RIGHT)
@@ -204,28 +163,11 @@ net.Receive("bigdogmat_whitelist_open", function(len)
 
         end
 
-        function decline:Paint(w, h)
-
-          drawButtonStlye(w, h)
-
-        end
-
-
-
-
-    end
-
-    function list_remove_all:Paint(w, h)
-
-      drawButtonStlye(w, h)
-
     end
 
   -- Remove selected IDs from the list
-  local list_remove_select = leftbase:Add "DButton"
+  local list_remove_select = leftbase:Add "DWhitelistButton"
     list_remove_select:SetText "Remove Selected"
-    --list_remove_select:SetTextColor(Color(236, 240, 241))
-    list_remove_select:SetFont "bigdogmat_button_text"
     list_remove_select:DockMargin(0, 2, 0, 0)
     list_remove_select:Dock(BOTTOM)
 
@@ -234,12 +176,6 @@ net.Receive("bigdogmat_whitelist_open", function(len)
       for _, v in pairs(list:GetSelected()) do
         remove_ID(v:GetValue(1))
       end
-
-    end
-
-    function list_remove_select:Paint(w, h)
-
-      drawButtonStlye(w, h)
 
     end
 

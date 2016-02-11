@@ -264,7 +264,7 @@ concommand.Add("whitelist_remove", function(caller, command, args, arg)
   if arg == '' then return end
   if not WHITELIST:Allowed(caller) then return end
 
-  wWHITELIST:Remove(arg)
+  WHITELIST:Remove(arg)
 end)
 
 -- whitelist_menu

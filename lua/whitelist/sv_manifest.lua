@@ -3,3 +3,6 @@
 AddCSLuaFile "cl_init.lua"
 AddCSLuaFile "cl_manifest.lua"
 AddCSLuaFile "cl_menu.lua"
+
+AddCSLuaFile "vgui/DWhitelistButton.lua"
+AddCSLuaFile "vgui/DWhitelistPanel.lua"
