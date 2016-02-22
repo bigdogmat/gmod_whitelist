@@ -1,48 +1,56 @@
 -- Whitelist menu
 
 
+-- Localized functions
+local string_gmatch = string.gmatch
+
+-- Create menu variables
+local list, reason, count, lookup
+
+-- Create helper functions
+
+local function add_ID(id, initial)
+
+  if id == '' then return end
+  if lookup[id] then return end
+
+  lookup[id] = list:AddLine(id):GetID()
+  count = count + 1
+
+  if initial then return end
+
+  RunConsoleCommand("whitelist", "add", id)
+
+end
+
+local function remove_ID(id)
+
+  if id == '' then return end
+  if not lookup[id] then return end
+
+  list:RemoveLine(lookup[id])
+  lookup[id] = nil
+  count = count - 1
+
+  RunConsoleCommand("whitelist", "remove", id)
+
+end
+
 -- Receive function for whitelist menu
 
 net.Receive("bigdogmat_whitelist_open", function(len)
 
-  local list
-  local reason, count, lookup = net.ReadString(), 0, {}
+  reason = net.ReadString()
+  lookup = {}
+  count = 0
+
   local data = util.Decompress(net.ReadData(net.ReadUInt(16)))
-
-  -- Helper functions for adding and removing SteamIDs
-
-  local function add_ID(id, initial)
-
-    if id == '' then return end
-    if lookup[id] then return end
-
-    lookup[id] = list:AddLine(id):GetID()
-    count = count + 1
-
-    if not initial then
-      LocalPlayer():ConCommand("whitelist_add " .. id)
-    end
-
-  end
-
-  local function remove_ID(id)
-
-    if id == '' then return end
-    if not lookup[id] then return end
-
-    list:RemoveLine(lookup[id])
-    lookup[id] = nil
-    count = count - 1
-
-    LocalPlayer():ConCommand("whitelist_remove " .. id)
-
-  end
 
   -- coroutine used to slow down the process of filling up the list
   local fill = coroutine.create(function()
     local inside = coroutine.running()
 
-    for SteamID in string.gmatch(data, "STEAM_[0-9]:[0-9]:[0-9]+") do
+    for SteamID in string_gmatch(data, "STEAM_%d:%d:%d+") do
 
       add_ID(SteamID, true)
 
@@ -80,7 +88,7 @@ net.Receive("bigdogmat_whitelist_open", function(len)
 
     function close:DoClick()
 
-      RunConsoleCommand("whitelist_save")
+      RunConsoleCommand("whitelist", "save")
       base:Remove()
 
     end
@@ -141,7 +149,7 @@ net.Receive("bigdogmat_whitelist_open", function(len)
 
         function confirm:DoClick()
 
-          for k, _ in pairs(Whitelist.lookup) do
+          for k, _ in pairs(lookup) do
             remove_ID(k)
           end
 
